@@ -3,6 +3,10 @@
 var turnsfx = new Audio('assets/rubixturn.mp3');
 var timersfx = new Audio('assets/beep1.mp3');
 var slidersfx = new Audio('assets/deck_ui_volume.mp3');
+var ingamemus = new Audio('assets/beep1.mp3');
+var menumus = new Audio('assets/menu.mp3');
+var prefences = new Audio('assets/prefrences.mp3');
+prefences.loop = true;
 const animationEngine = ( () => {
 
   let uniqueID = 0;
@@ -997,7 +1001,7 @@ class Tween extends Animation {
     this.easing = options.easing || ( t => t );
     this.onUpdate = options.onUpdate || ( () => {} );
     this.onComplete = options.onComplete || ( () => {} );
-
+    this.onStart = options.onStart || (() => {} );
     this.delay = options.delay || false;
     this.yoyo = options.yoyo ? false : null;
 
@@ -1006,7 +1010,7 @@ class Tween extends Animation {
     this.delta = 0;
 
     this.getFromTo( options );
-
+    this.onStart( this );
     if ( this.delay ) setTimeout( () => super.start(), this.delay );
     else super.start();
 
@@ -1917,6 +1921,7 @@ class Transition {
 
     this.tweens.buttons = {};
     this.tweens.timer = [];
+    this.tweens.start = [];
     this.tweens.hint = [];
     this.tweens.title = [];
     this.tweens.best = [];
@@ -2021,7 +2026,7 @@ class Transition {
 
         this.game.cube.holder.position.y = (- 0.02 + tween.value * 0.04); 
         this.game.cube.holder.rotation.x = 0.005 - tween.value * 0.01;
-        this.game.cube.holder.rotation.z = - this.game.cube.holder.rotation.x;
+        this.game.cube.holder.rotation.z + 50;
         this.game.cube.holder.rotation.y = this.game.cube.holder.rotation.x;
 
         this.game.controls.edges.position.y =
@@ -2062,7 +2067,31 @@ class Transition {
     setTimeout( () => this.activeTransitions--, this.durations.zoom );
 
   }
+   
+  zoommenu( play, time ) {
 
+    this.activeTransitions++;
+
+    const zoom = ( play ) ? 1 : this.data.cameraZoom;
+    const duration = ( time > 0 ) ? Math.max( time, 1500 ) : 1500;
+    const rotations = ( time > 0 ) ? Math.round( duration / 1500 ) : 1;
+    const easing = Easing.Power.InOut( ( time > 0 ) ? 2 : 3 );
+
+
+    this.tweens.rotate = new Tween( {
+      target: this.game.cube.animator.rotation,
+      duration: duration,
+      easing: easing,
+      yoyo: true,
+      to: { y: - Math.PI * 2 * rotations },
+      onComplete: () => { this.game.cube.animator.rotation.y = 0; },
+    } );
+
+    this.durations.zoom = duration;
+
+    setTimeout( () => this.activeTransitions--, this.durations.zoom );
+
+  }
   elevate( complete ) {
 
     this.activeTransitions++;
@@ -2288,7 +2317,10 @@ class Transition {
       yoyo: show ? true : null,
       from: { opacity: show ? 0 : ( parseFloat( getComputedStyle( note ).opacity ) ) },
       to: { opacity: show ? 1 : 0 },
-    } );
+        onStart: () => {
+          //turnsfx.cloneNode(true).play();
+        },
+    });
 
     setTimeout( () => this.activeTransitions--, this.durations.title );
 
@@ -2325,7 +2357,7 @@ class Transition {
     const letters = timer.querySelectorAll( 'i' );
     this.flipLetters( 'timer', letters, show );
 
-    timer.style.opacity = 1;
+    //timer.style.opacity = 1;
 
     setTimeout( () => this.activeTransitions--, this.durations.timer );
 
@@ -2352,7 +2384,6 @@ class Transition {
 
     try { this.tweens[ type ].forEach( tween => tween.stop() ); } catch(e) {}
     letters.forEach( ( letter, index ) => {
-
       letter.style.opacity = show ? 0 : 1;
 
       this.tweens[ type ][ index ] = new Tween( {
@@ -2362,11 +2393,10 @@ class Transition {
         onUpdate: tween => {
 
           const rotation = show ? ( 1 - tween.value ) * -80 : tween.value * 80;
-
           letter.style.transform = `rotate3d(0, 1, 0, ${rotation}deg)`;
           letter.style.opacity = show ? tween.value : ( 1 - tween.value );
 
-        },
+        }
       } );
 
     } );
@@ -2633,7 +2663,7 @@ class Preferences {
 
       size: new Range( 'size', {
         value: this.game.cube.size,
-        range: [ 1, 5 ],
+        range: [ 1, 5  ],
         step: 1,
         onUpdate: value => {
           slidersfx.play();
@@ -3704,6 +3734,8 @@ const Icons = new IconsConverter( {
 
 } );
 
+// Example usage: solver.solve();
+
 const STATE = {
   Menu: 0,
   Playing: 1,
@@ -3783,7 +3815,7 @@ class Game {
     this.scores.calcStats();
 
     setTimeout( () => {
-
+      menumus.play();
       this.transition.float();
       this.transition.cube( SHOW );
 
@@ -3808,7 +3840,7 @@ class Game {
         if ( ! tappedTwice ) {
           
           tappedTwice = true;
-          timersfx().play();
+          //timersfx().play();
           setTimeout( () => tappedTwice = false, 300 );
           return false;
 
@@ -3831,7 +3863,8 @@ class Game {
     this.controls.onMove = () => {
 
       if ( this.newGame ) {
-        
+        ingamemus.play()
+        //ingamemus.loop = true
         this.timer.start( true );
         this.transition.hint( HIDE );
         this.newGame = false;
@@ -3841,7 +3874,7 @@ class Game {
     };
 
     this.dom.buttons.back.onclick = event => {
-      timersfx.play();
+      //timersfx.play();
       if ( this.transition.activeTransitions > 0 ) return;
 
       if ( this.state === STATE.Playing ) {
@@ -3861,7 +3894,7 @@ class Game {
     };
 
     this.dom.buttons.reset.onclick = event => {
-      timersfx.play();
+      //timersfx.play();
       if ( this.state === STATE.Theme ) {
 
         this.themeEditor.resetTheme();
@@ -3871,15 +3904,15 @@ class Game {
     };
     this.dom.buttons.prefs.onclick = event => {
       this.prefs( SHOW );
-      timersfx.play();
+      //timersfx.play();
     };
     this.dom.buttons.theme.onclick = event => {
       this.theme( SHOW );
-      timersfx.play();
+      //timersfx.play();
     };
     this.dom.buttons.stats.onclick = event => {
       this.stats( SHOW )
-      timersfx.play();
+      //timersfx.play();
     };
     
 
@@ -3956,8 +3989,10 @@ class Game {
 
       this.transition.title( HIDE );
       this.transition.cube( HIDE );
-
+      setTimeout( () =>  menumus.pause(), 1000 );
+      setTimeout( () =>  menumus.currentTime = 0, 1000 );
       setTimeout( () => this.transition.preferences( SHOW ), 1000 );
+      setTimeout( () => prefences.play(), 1000 );
 
     } else {
 
@@ -3968,8 +4003,10 @@ class Game {
       this.transition.buttons( BUTTONS.Menu, BUTTONS.Prefs );
 
       this.transition.preferences( HIDE );
-
+      prefences.pause()
+      prefences.currentTime = 0;
       setTimeout( () => this.transition.cube( SHOW ), 500 );
+      setTimeout(() => menumus.play(), 1200);
       setTimeout( () => this.transition.title( SHOW ), 1200 );
 
     }
@@ -4110,4 +4147,16 @@ class Game {
 }
 
 window.version = '0.99.2';
-window.game = new Game();
+
+function initializeGame() {
+  window.game = new Game();
+}
+
+function onUserInteraction() {
+  document.removeEventListener('click', onUserInteraction);
+  document.removeEventListener('keydown', onUserInteraction);
+  initializeGame();
+}
+alert("Welcome to the game! Click or press any key to start.");
+document.addEventListener('click', onUserInteraction);
+document.addEventListener('keydown', onUserInteraction);
